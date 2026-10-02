@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#08111f" />
+  <title>Air Watch | Singapore · Kuala Lumpur · Ipoh</title>
+  <meta name="description" content="Live air quality dashboard for Singapore, Kuala Lumpur and Ipoh. Auto-refreshes every 5 minutes." />
+  <style>
+    :root{
+      --bg:#07101d; --panel:#0c1728; --panel2:#101e32; --text:#f6f8fb; --muted:#9db0c8;
+      --line:rgba(255,255,255,.09); --shadow:0 28px 70px rgba(0,0,0,.28); --radius:26px;
+      --good:#22c55e; --moderate:#eab308; --sensitive:#f97316; --unhealthy:#ef4444; --very:#a855f7; --hazard:#9f1239;
+    }
+    *{box-sizing:border-box}
+    html{scroll-behavior:smooth}
+    body{margin:0;min-height:100vh;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--text);background:
+      radial-gradient(circle at 15% 0%,rgba(40,151,255,.18),transparent 34%),
+      radial-gradient(circle at 90% 12%,rgba(20,184,166,.12),transparent 28%),
+      linear-gradient(180deg,#08111f 0%,#07101d 48%,#050b14 100%);}
+    body:before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.22;background-image:linear-gradient(rgba(255,255,255,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.025) 1px,transparent 1px);background-size:42px 42px;mask-image:linear-gradient(to bottom,black,transparent 75%)}
+    .shell{width:min(1240px,calc(100% - 32px));margin:0 auto;padding:42px 0 48px}
+    .topbar{display:flex;align-items:center;justify-content:space-between;gap:22px;margin-bottom:30px}
+    .brand{display:flex;align-items:center;gap:14px}.brandmark{width:48px;height:48px;border-radius:16px;display:grid;place-items:center;background:linear-gradient(145deg,#19b5fe,#14b8a6);box-shadow:0 12px 34px rgba(20,184,166,.24);font-size:23px}.brand h1{font-size:18px;letter-spacing:.02em;margin:0}.brand p{margin:3px 0 0;color:var(--muted);font-size:12px}
+    .actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end}.pill,.btn{border:1px solid var(--line);background:rgba(255,255,255,.045);color:var(--text);backdrop-filter:blur(12px);border-radius:999px;padding:10px 14px;font-size:12px}.btn{cursor:pointer;font-weight:700;transition:.2s ease}.btn:hover{transform:translateY(-1px);background:rgba(255,255,255,.08)}.pulse{display:inline-block;width:7px;height:7px;border-radius:50%;background:#34d399;box-shadow:0 0 0 0 rgba(52,211,153,.5);animation:pulse 1.8s infinite;margin-right:7px}@keyframes pulse{70%{box-shadow:0 0 0 7px rgba(52,211,153,0)}100%{box-shadow:0 0 0 0 rgba(52,211,153,0)}}
+    .hero{border:1px solid var(--line);background:linear-gradient(135deg,rgba(20,39,64,.94),rgba(9,21,37,.9));border-radius:32px;padding:34px 34px 30px;box-shadow:var(--shadow);position:relative;overflow:hidden;margin-bottom:24px}.hero:after{content:"";position:absolute;right:-80px;top:-100px;width:330px;height:330px;border-radius:50%;background:radial-gradient(circle,rgba(56,189,248,.18),transparent 66%)}.eyebrow{display:inline-flex;gap:7px;align-items:center;color:#87d8ff;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.14em}.hero h2{margin:12px 0 10px;font-size:clamp(32px,5vw,60px);line-height:1.02;letter-spacing:-.045em;max-width:850px}.hero h2 span{color:#77d5ff}.hero .sub{color:#b8c8da;max-width:760px;font-size:15px;line-height:1.65;margin:0}.hero-stats{display:flex;gap:24px;flex-wrap:wrap;margin-top:25px}.hero-stat{min-width:150px}.hero-stat strong{display:block;font-size:15px}.hero-stat span{color:var(--muted);font-size:12px}
+    .grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px}.card{--accent:#64748b;position:relative;border:1px solid var(--line);border-radius:var(--radius);background:linear-gradient(180deg,rgba(18,32,52,.96),rgba(10,21,36,.96));box-shadow:0 18px 44px rgba(0,0,0,.2);padding:22px;overflow:hidden;min-height:470px}.card:before{content:"";position:absolute;inset:0 0 auto 0;height:4px;background:var(--accent)}.card:after{content:"";position:absolute;width:240px;height:240px;right:-90px;top:-90px;border-radius:50%;background:radial-gradient(circle,color-mix(in srgb,var(--accent) 23%,transparent),transparent 68%);pointer-events:none}.city-row{display:flex;justify-content:space-between;gap:14px;align-items:flex-start}.city h3{font-size:23px;margin:0 0 2px;letter-spacing:-.03em}.city span{color:var(--muted);font-size:12px}.status{font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.06em;padding:8px 10px;border-radius:999px;color:#fff;background:var(--accent);max-width:145px;text-align:center}
+    .aqi-wrap{display:flex;align-items:center;gap:16px;margin:24px 0 18px}.gauge{width:132px;height:132px;border-radius:50%;display:grid;place-items:center;background:conic-gradient(var(--accent) var(--p,0%),rgba(255,255,255,.08) 0);position:relative}.gauge:before{content:"";position:absolute;inset:9px;border-radius:50%;background:#0e1b2c;border:1px solid rgba(255,255,255,.05)}.aqi-num{position:relative;text-align:center}.aqi-num strong{display:block;font-size:43px;line-height:.95;letter-spacing:-.055em}.aqi-num span{display:block;color:var(--muted);font-size:10px;font-weight:800;letter-spacing:.12em;margin-top:7px}.aqi-copy{flex:1}.aqi-copy b{font-size:15px}.aqi-copy p{font-size:12px;line-height:1.55;color:var(--muted);margin:6px 0 0}
+    .metrics{display:grid;grid-template-columns:repeat(2,1fr);gap:9px;margin-top:16px}.metric{padding:12px;border:1px solid var(--line);background:rgba(255,255,255,.025);border-radius:16px}.metric span{display:block;color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.09em}.metric strong{display:block;font-size:18px;margin-top:4px}.metric em{font-style:normal;color:#7288a1;font-size:10px;margin-left:2px}
+    .trend{margin-top:18px;padding-top:16px;border-top:1px solid var(--line)}.trend-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}.trend-head b{font-size:12px}.trend-head span{color:var(--muted);font-size:10px}.spark{height:64px;width:100%;overflow:visible}.spark path.line{fill:none;stroke:var(--accent);stroke-width:3;stroke-linecap:round;stroke-linejoin:round}.spark path.area{fill:url(#fade)}
+    .loading{animation:shimmer 1.3s infinite linear;background:linear-gradient(90deg,rgba(255,255,255,.05),rgba(255,255,255,.11),rgba(255,255,255,.05));background-size:200% 100%;color:transparent!important;border-radius:7px}@keyframes shimmer{to{background-position:-200% 0}}
+    .error{margin-top:18px;padding:12px;border-radius:14px;background:rgba(239,68,68,.09);border:1px solid rgba(239,68,68,.23);color:#fecaca;font-size:12px;line-height:1.5}
+    .legend{margin-top:24px;border:1px solid var(--line);border-radius:24px;background:rgba(255,255,255,.025);padding:20px}.legend-top{display:flex;justify-content:space-between;gap:18px;align-items:center;margin-bottom:14px}.legend h4{margin:0;font-size:14px}.legend small{color:var(--muted)}.legend-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:8px}.legend-item{padding:12px 10px;border-radius:14px;background:rgba(255,255,255,.025);border:1px solid var(--line)}.legend-item i{display:block;width:8px;height:8px;border-radius:99px;margin-bottom:8px}.legend-item b{display:block;font-size:11px}.legend-item span{font-size:10px;color:var(--muted)}
+    footer{display:flex;justify-content:space-between;gap:20px;align-items:flex-start;color:#7489a1;font-size:11px;line-height:1.55;margin-top:18px;padding:0 4px}footer a{color:#8fdcff;text-decoration:none}.source-note{max-width:800px}
+    @media(max-width:950px){.grid{grid-template-columns:1fr}.card{min-height:auto}.topbar{align-items:flex-start}.legend-grid{grid-template-columns:repeat(3,1fr)}}
+    @media(max-width:640px){.shell{width:min(100% - 20px,1240px);padding-top:20px}.topbar{flex-direction:column}.actions{justify-content:flex-start}.hero{padding:25px 21px;border-radius:25px}.hero h2{font-size:36px}.hero-stats{gap:16px}.grid{gap:13px}.card{padding:18px;border-radius:22px}.aqi-wrap{gap:12px}.gauge{width:116px;height:116px}.aqi-num strong{font-size:37px}.legend-grid{grid-template-columns:repeat(2,1fr)}footer{flex-direction:column}.status{max-width:115px;font-size:9px}}
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <div class="topbar">
+      <div class="brand"><div class="brandmark">◌</div><div><h1>Air Watch</h1><p>Singapore · Kuala Lumpur · Ipoh</p></div></div>
+      <div class="actions">
+        <div class="pill"><span class="pulse"></span>Live dashboard</div>
+        <div class="pill" id="countdown">Refresh in 05:00</div>
+        <button class="btn" id="refreshBtn" type="button">↻ Refresh now</button>
+      </div>
+    </div>
+
+    <section class="hero">
+      <div class="eyebrow">● Regional air quality monitor</div>
+      <h2>Know the air <span>before you step out.</span></h2>
+      <p class="sub">A clean, at-a-glance view of current air quality across Singapore, Kuala Lumpur and Ipoh, with particulate readings and a short AQI trend. Data refreshes automatically every five minutes.</p>
+      <div class="hero-stats">
+        <div class="hero-stat"><strong id="lastUpdated">Loading live data…</strong><span>Last data refresh</span></div>
+        <div class="hero-stat"><strong>US AQI</strong><span>Common comparison scale</span></div>
+        <div class="hero-stat"><strong>5 min</strong><span>Automatic refresh interval</span></div>
+      </div>
+    </section>
+
+    <section class="grid" id="cards"></section>
+
+    <section class="legend">
+      <div class="legend-top"><h4>US AQI health scale</h4><small>Higher AQI = greater health concern</small></div>
+      <div class="legend-grid">
+        <div class="legend-item"><i style="background:var(--good)"></i><b>Good</b><span>0–50</span></div>
+        <div class="legend-item"><i style="background:var(--moderate)"></i><b>Moderate</b><span>51–100</span></div>
+        <div class="legend-item"><i style="background:var(--sensitive)"></i><b>Sensitive groups</b><span>101–150</span></div>
+        <div class="legend-item"><i style="background:var(--unhealthy)"></i><b>Unhealthy</b><span>151–200</span></div>
+        <div class="legend-item"><i style="background:var(--very)"></i><b>Very unhealthy</b><span>201–300</span></div>
+        <div class="legend-item"><i style="background:var(--hazard)"></i><b>Hazardous</b><span>301+</span></div>
+      </div>
+    </section>
+
+    <footer>
+      <div class="source-note">Source: Open-Meteo Air Quality API using CAMS atmospheric forecasts. This dashboard shows modeled US AQI and pollutant concentrations for consistent cross-city comparison; it is not an official government monitoring-station feed or Singapore PSI / Malaysia API reading.</div>
+      <div>Air Watch · <span id="year"></span></div>
+    </footer>
+  </main>
+
+<script>
+const CITIES = [
+  { name:'Singapore', country:'Singapore', lat:1.3521, lon:103.8198, tz:'Asia/Singapore' },
+  { name:'Kuala Lumpur', country:'Malaysia', lat:3.1390, lon:101.6869, tz:'Asia/Kuala_Lumpur' },
+  { name:'Ipoh', country:'Malaysia', lat:4.5975, lon:101.0901, tz:'Asia/Kuala_Lumpur' }
+];
+const REFRESH_MS = 5 * 60 * 1000;
+let nextRefresh = Date.now() + REFRESH_MS;
+
+const bands = [
+  {max:50,label:'Good',color:'#22c55e',advice:'Air quality is satisfactory. Normal outdoor activity is generally fine.'},
+  {max:100,label:'Moderate',color:'#eab308',advice:'Acceptable for most people. Unusually sensitive people may want to reduce prolonged exertion.'},
+  {max:150,label:'Unhealthy for sensitive groups',color:'#f97316',advice:'Sensitive groups may experience effects. Consider reducing prolonged or heavy outdoor exertion.'},
+  {max:200,label:'Unhealthy',color:'#ef4444',advice:'Some people may experience health effects. Reduce prolonged or heavy outdoor activity.'},
+  {max:300,label:'Very unhealthy',color:'#a855f7',advice:'Health alert. Consider limiting outdoor activity, especially strenuous exercise.'},
+  {max:Infinity,label:'Hazardous',color:'#9f1239',advice:'Health warning. Minimize outdoor exposure and follow local public-health advice.'}
+];
+
+const cardsEl = document.getElementById('cards');
+const refreshBtn = document.getElementById('refreshBtn');
+const countdownEl = document.getElementById('countdown');
+document.getElementById('year').textContent = new Date().getFullYear();
+
+function bandFor(aqi){
+  const value = Number.isFinite(+aqi) ? +aqi : 0;
+  return bands.find(b => value <= b.max) || bands[bands.length-1];
+}
+function fmt(v,d=0){ return Number.isFinite(+v) ? (+v).toFixed(d) : '—'; }
+function localTime(tz){ return new Intl.DateTimeFormat('en-SG',{timeZone:tz,hour:'2-digit',minute:'2-digit',hour12:false}).format(new Date()); }
+function escapeHtml(s){return String(s).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));}
+
+function skeleton(city, idx){
+  return `<article class="card" id="card-${idx}">
+    <div class="city-row"><div class="city"><h3>${escapeHtml(city.name)}</h3><span>${escapeHtml(city.country)} · ${localTime(city.tz)}</span></div><div class="status" style="background:#334155">Loading</div></div>
+    <div class="aqi-wrap"><div class="gauge" style="--p:10%;--accent:#334155"><div class="aqi-num"><strong class="loading">000</strong><span>US AQI</span></div></div><div class="aqi-copy"><b class="loading">Loading air quality</b><p>Connecting to the live air-quality feed…</p></div></div>
+    <div class="metrics"><div class="metric"><span>PM2.5</span><strong class="loading">00.0</strong></div><div class="metric"><span>PM10</span><strong class="loading">00.0</strong></div><div class="metric"><span>Ozone</span><strong class="loading">00.0</strong></div><div class="metric"><span>NO₂</span><strong class="loading">00.0</strong></div></div>
+  </article>`;
+}
+function renderSkeletons(){ cardsEl.innerHTML = CITIES.map(skeleton).join(''); }
+
+function sparkline(values, accent){
+  const clean = values.map(Number).filter(Number.isFinite);
+  if(clean.length < 2) return '<div style="height:64px;color:#71859e;font-size:11px;display:grid;place-items:center">Trend unavailable</div>';
+  const w=300,h=64,pad=4,min=Math.min(...clean),max=Math.max(...clean),range=Math.max(1,max-min);
+  const pts=clean.map((v,i)=>[pad+i*(w-pad*2)/(clean.length-1), h-pad-(v-min)*(h-pad*2)/range]);
+  const path=pts.map((p,i)=>(i?'L':'M')+p[0].toFixed(1)+','+p[1].toFixed(1)).join(' ');
+  const area=path+` L${pts[pts.length-1][0].toFixed(1)},${h} L${pts[0][0].toFixed(1)},${h} Z`;
+  const gid='g'+Math.random().toString(36).slice(2,8);
+  return `<svg class="spark" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" aria-label="12-hour AQI trend"><defs><linearGradient id="${gid}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${accent}" stop-opacity=".25"/><stop offset="1" stop-color="${accent}" stop-opacity="0"/></linearGradient></defs><path d="${area}" fill="url(#${gid})"/><path class="line" style="stroke:${accent}" d="${path}"/></svg>`;
+}
+
+function renderCity(city, data, idx){
+  const c=data.current||{}; const aqi=Math.round(Number(c.us_aqi)); const band=bandFor(aqi);
+  const percentage=Math.min(100,Math.max(3,(aqi/300)*100));
+  const trend=(data.hourly&&data.hourly.us_aqi?data.hourly.us_aqi.slice(0,12):[]);
+  const card=document.getElementById(`card-${idx}`);
+  card.style.setProperty('--accent',band.color);
+  card.innerHTML=`
+    <div class="city-row"><div class="city"><h3>${escapeHtml(city.name)}</h3><span>${escapeHtml(city.country)} · ${localTime(city.tz)}</span></div><div class="status">${escapeHtml(band.label)}</div></div>
+    <div class="aqi-wrap">
+      <div class="gauge" style="--p:${percentage}%;--accent:${band.color}"><div class="aqi-num"><strong>${Number.isFinite(aqi)?aqi:'—'}</strong><span>US AQI</span></div></div>
+      <div class="aqi-copy"><b>${escapeHtml(band.label)}</b><p>${escapeHtml(band.advice)}</p></div>
+    </div>
+    <div class="metrics">
+      <div class="metric"><span>PM2.5</span><strong>${fmt(c.pm2_5,1)} <em>µg/m³</em></strong></div>
+      <div class="metric"><span>PM10</span><strong>${fmt(c.pm10,1)} <em>µg/m³</em></strong></div>
+      <div class="metric"><span>Ozone</span><strong>${fmt(c.ozone,1)} <em>µg/m³</em></strong></div>
+      <div class="metric"><span>NO₂</span><strong>${fmt(c.nitrogen_dioxide,1)} <em>µg/m³</em></strong></div>
+    </div>
+    <div class="trend"><div class="trend-head"><b>Next 12 hours</b><span>AQI trend</span></div>${sparkline(trend,band.color)}</div>`;
+}
+
+function renderError(city, idx, message){
+  const card=document.getElementById(`card-${idx}`);
+  card.style.setProperty('--accent','#64748b');
+  card.innerHTML=`<div class="city-row"><div class="city"><h3>${escapeHtml(city.name)}</h3><span>${escapeHtml(city.country)}</span></div><div class="status" style="background:#475569">Unavailable</div></div><div class="error"><b>Live data could not be loaded.</b><br>${escapeHtml(message || 'Please try again shortly.')}</div>`;
+}
+
+async function getCity(city){
+  const params=new URLSearchParams({
+    latitude:city.lat, longitude:city.lon,
+    current:'us_aqi,pm2_5,pm10,ozone,nitrogen_dioxide',
+    hourly:'us_aqi', forecast_hours:'12', timezone:city.tz
+  });
+  const url=`https://air-quality-api.open-meteo.com/v1/air-quality?${params}`;
+  const res=await fetch(url,{cache:'no-store'});
+  if(!res.ok) throw new Error(`Data service returned ${res.status}.`);
+  return res.json();
+}
+
+async function refreshAll(){
+  refreshBtn.disabled=true; refreshBtn.textContent='↻ Refreshing…'; nextRefresh=Date.now()+REFRESH_MS;
+  const results=await Promise.allSettled(CITIES.map(getCity));
+  results.forEach((r,i)=>r.status==='fulfilled'?renderCity(CITIES[i],r.value,i):renderError(CITIES[i],i,r.reason?.message));
+  const ok=results.filter(r=>r.status==='fulfilled').length;
+  document.getElementById('lastUpdated').textContent = ok ? new Intl.DateTimeFormat('en-SG',{dateStyle:'medium',timeStyle:'short',timeZone:'Asia/Singapore'}).format(new Date()) : 'Data temporarily unavailable';
+  refreshBtn.disabled=false; refreshBtn.textContent='↻ Refresh now';
+}
+
+function updateCountdown(){
+  const left=Math.max(0,nextRefresh-Date.now()); const s=Math.ceil(left/1000); const m=Math.floor(s/60); const sec=s%60;
+  countdownEl.textContent=`Refresh in ${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
+}
+
+renderSkeletons(); refreshAll();
+setInterval(()=>{ nextRefresh=Date.now()+REFRESH_MS; refreshAll(); },REFRESH_MS);
+setInterval(updateCountdown,1000);
+refreshBtn.addEventListener('click',refreshAll);
+</script>
+</body>
+</html>
